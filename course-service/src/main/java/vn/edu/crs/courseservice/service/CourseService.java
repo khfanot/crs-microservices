@@ -1,54 +1,89 @@
 package vn.edu.crs.courseservice.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import vn.edu.crs.courseservice.dto.CourseDTO;
 import vn.edu.crs.courseservice.entity.Course;
 import vn.edu.crs.courseservice.repository.CourseRepository;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CourseService {
 
     private final CourseRepository courseRepository;
 
-    public CourseService(CourseRepository courseRepository) {
-        this.courseRepository = courseRepository;
+    public List<CourseDTO> getAll() {
+        return courseRepository.findAll()
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    // Lấy tất cả môn học
-    public List<Course> getAllCourses() {
-        return courseRepository.findAll();
+    public CourseDTO getById(Long id) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Khong tim thay mon hoc id = " + id
+                ));
+
+        return toDTO(course);
     }
 
-    // Lấy môn học theo ID
-    public Course getCourseById(Long id) {
-        return courseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Khong tim thay mon hoc"));
+    public CourseDTO create(CourseDTO dto) {
+
+        if (courseRepository.existsByTenMonHocIgnoreCase(dto.getTenMonHoc())) {
+            throw new IllegalArgumentException("Ten mon hoc da ton tai");
+        }
+
+        Course course = new Course();
+
+        course.setTenMonHoc(dto.getTenMonHoc());
+        course.setSoTinChi(dto.getSoTinChi());
+        course.setSoChoToiDa(dto.getSoChoToiDa());
+
+        // Khi tạo mới, số chỗ còn lại = số chỗ tối đa
+        course.setSoChoConLai(dto.getSoChoToiDa());
+
+        return toDTO(courseRepository.save(course));
     }
 
-    // Thêm môn học
-    public Course createCourse(Course course) {
-        return courseRepository.save(course);
+    public CourseDTO update(Long id, CourseDTO dto) {
+
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Khong tim thay mon hoc id = " + id
+                ));
+
+        course.setTenMonHoc(dto.getTenMonHoc());
+        course.setSoTinChi(dto.getSoTinChi());
+        course.setSoChoToiDa(dto.getSoChoToiDa());
+
+        // Không sửa trực tiếp soChoConLai tại đây
+
+        return toDTO(courseRepository.save(course));
     }
 
-    // Sửa môn học
-    public Course updateCourse(Long id, Course courseDetails) {
+    public void delete(Long id) {
 
-        Course course = getCourseById(id);
+        if (!courseRepository.existsById(id)) {
+            throw new NoSuchElementException(
+                    "Khong tim thay mon hoc id = " + id
+            );
+        }
 
-        course.setTenMonHoc(courseDetails.getTenMonHoc());
-        course.setSoTinChi(courseDetails.getSoTinChi());
-        course.setSoChoToiDa(courseDetails.getSoChoToiDa());
-        course.setSoChoConLai(courseDetails.getSoChoConLai());
-
-        return courseRepository.save(course);
+        courseRepository.deleteById(id);
     }
 
-    // Xóa môn học
-    public void deleteCourse(Long id) {
-
-        Course course = getCourseById(id);
-
-        courseRepository.delete(course);
+    private CourseDTO toDTO(Course course) {
+        return new CourseDTO(
+                course.getId(),
+                course.getTenMonHoc(),
+                course.getSoTinChi(),
+                course.getSoChoToiDa(),
+                course.getSoChoConLai()
+        );
     }
 }
