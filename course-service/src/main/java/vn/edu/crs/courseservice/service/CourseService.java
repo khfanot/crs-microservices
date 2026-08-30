@@ -1,7 +1,10 @@
 package vn.edu.crs.courseservice.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.crs.courseservice.dto.CourseDTO;
 import vn.edu.crs.courseservice.entity.Course;
 import vn.edu.crs.courseservice.repository.CourseRepository;
@@ -16,6 +19,7 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
 
+    // Lấy tất cả môn học - giữ lại từ Buổi 2
     public List<CourseDTO> getAll() {
         return courseRepository.findAll()
                 .stream()
@@ -23,6 +27,7 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
+    // Lấy môn học theo ID
     public CourseDTO getById(Long id) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException(
@@ -32,6 +37,7 @@ public class CourseService {
         return toDTO(course);
     }
 
+    // Tạo môn học
     public CourseDTO create(CourseDTO dto) {
 
         if (courseRepository.existsByTenMonHocIgnoreCase(dto.getTenMonHoc())) {
@@ -50,6 +56,7 @@ public class CourseService {
         return toDTO(courseRepository.save(course));
     }
 
+    // Cập nhật môn học
     public CourseDTO update(Long id, CourseDTO dto) {
 
         Course course = courseRepository.findById(id)
@@ -66,6 +73,7 @@ public class CourseService {
         return toDTO(courseRepository.save(course));
     }
 
+    // Xóa môn học
     public void delete(Long id) {
 
         if (!courseRepository.existsById(id)) {
@@ -77,6 +85,56 @@ public class CourseService {
         courseRepository.deleteById(id);
     }
 
+    // Buổi 3: tìm kiếm + phân trang
+    public Page<CourseDTO> search(String keyword, Pageable pageable) {
+
+        Page<Course> page = (keyword == null || keyword.isBlank())
+                ? courseRepository.findAll(pageable)
+                : courseRepository.findByTenMonHocContainingIgnoreCase(
+                keyword,
+                pageable
+        );
+
+        return page.map(this::toDTO);
+    }
+
+    // Buổi 3: giữ 1 chỗ
+    @Transactional
+    public CourseDTO reserveSeat(Long courseId) {
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Khong tim thay mon hoc id = " + courseId
+                ));
+
+        if (course.getSoChoConLai() <= 0) {
+            throw new IllegalStateException(
+                    "Mon hoc da het cho, khong the dang ky"
+            );
+        }
+
+        course.setSoChoConLai(course.getSoChoConLai() - 1);
+
+        return toDTO(courseRepository.save(course));
+    }
+
+    // Buổi 3: hoàn lại 1 chỗ
+    @Transactional
+    public CourseDTO releaseSeat(Long courseId) {
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Khong tim thay mon hoc id = " + courseId
+                ));
+
+        if (course.getSoChoConLai() < course.getSoChoToiDa()) {
+            course.setSoChoConLai(course.getSoChoConLai() + 1);
+        }
+
+        return toDTO(courseRepository.save(course));
+    }
+
+    // Chuyển Course Entity -> CourseDTO
     private CourseDTO toDTO(Course course) {
         return new CourseDTO(
                 course.getId(),
