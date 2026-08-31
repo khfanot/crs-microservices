@@ -67,9 +67,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         .setAuthentication(authToken);
 
             } catch (Exception e) {
-                System.out.println("JWT ERROR: " + e.getMessage());
-                e.printStackTrace();
                 SecurityContextHolder.clearContext();
+
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write(
+                        "{\"message\":\"Token khong hop le hoac da het han\"}"
+                );
+
+                return;
             }
         }
 
