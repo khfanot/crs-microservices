@@ -12,7 +12,7 @@ import LoginPage from './pages/LoginPage';
 import CoursesPage from './pages/CoursesPage';
 import AdminCoursesPage from './pages/AdminCoursesPage';
 import RegisterCoursePage from './pages/RegisterCoursePage';
-import MyRegistrationsPage from './pages/MyRegistrationsPage';
+import ApiKeysPage from './pages/ApiKeysPage';
 
 import Navbar from './components/Navbar';
 
@@ -48,6 +48,15 @@ function App() {
           />
 
           <Route
+            path="/admin/api-keys"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <ApiKeysPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/register-course"
             element={
               <ProtectedRoute requiredRole="STUDENT">
@@ -57,12 +66,8 @@ function App() {
           />
 
           <Route
-            path="/my-registrations"
-            element={
-              <ProtectedRoute requiredRole="STUDENT">
-                <MyRegistrationsPage />
-              </ProtectedRoute>
-            }
+            path="*"
+            element={<Navigate to="/courses" replace />}
           />
         </Routes>
       </AuthProvider>
